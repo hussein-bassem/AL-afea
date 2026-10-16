@@ -44,24 +44,26 @@
         position: fixed;
         top: 0;
         left: 0;
-        width: 100%;
-        background: rgba(0, 0, 0, 0.4);
+        width: 100vw;
+        background: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(5px);
         color: #ffcc00;
         padding: 6px 0;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         font-weight: bold;
-        z-index: 2000;
+        z-index: 9999;
         overflow: hidden;
         white-space: nowrap;
         pointer-events: none;
-        border-bottom: 1px solid rgba(255, 204, 0, 0.2);
+        border-bottom: 1px solid rgba(255, 204, 0, 0.3);
+        direction: ltr; /* لتثبيت حركة الحركة من اليسار لليمين */
     }
 
     .top-rights-text {
         display: inline-block;
         padding-left: 100%;
         animation: moveLeftToRight 12s linear infinite;
+        direction: rtl;
     }
 
     @keyframes moveLeftToRight {
@@ -94,7 +96,7 @@
 
     .back-btn-main {  
         position: fixed;   
-        top: 35px;  
+        top: 40px;  
         right: 20px;  
         padding: 10px 20px;  
         background-color: #dc3545;  
@@ -248,7 +250,7 @@
 
 <!-- شريط الحقوق المتحرك العلوي -->
 <div class="top-rights-bar">
-    <span class="top-rights-text">تطوير وبرمجة: أبو علي | جميع الحقوق محفوظة © 2026</span>
+    <div class="top-rights-text">تطوير وبرمجة: أبو علي | جميع الحقوق محفوظة © 2026</div>
 </div>
 
 <!-- عنصر الصوت مجهز بنغمة الفلوت مع التكرار loop -->  

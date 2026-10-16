@@ -1,0 +1,743 @@
+<!DOCTYPE html>  
+<html lang="ar" dir="rtl">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>نظام العافية - البندر</title>  
+    
+    <!-- ربط ملفات التطبيق (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#141e30">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- إضافة مكتبات Firebase الأساسية والداتابيز والإشعارات -->  
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>  
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>  
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>  
+
+<style>  
+    /* === ديكورات الخلفية الفخمة === */  
+    body {  
+        background: linear-gradient(135deg, #141e30 0%, #243b55 100%) !important;  
+        background-size: 200% 200% !important;  
+        animation: gradientMove 10s ease infinite !important;  
+        margin: 0;  
+        height: 100vh;  
+        display: flex;  
+        justify-content: center;  
+        align-items: center;  
+        font-family: Arial, sans-serif;  
+        overflow: hidden;  
+        transition: background 0.5s ease;  
+        position: relative;  
+    }  
+
+    @keyframes gradientMove {  
+        0% { background-position: 0% 50%; }  
+        50% { background-position: 100% 50%; }  
+        100% { background-position: 0% 50%; }  
+    }  
+
+    .bg-decorations {  
+        position: fixed;  
+        top: 0; left: 0; width: 100vw; height: 100vh;  
+        z-index: -1;  
+        overflow: hidden;  
+        pointer-events: none;  
+    }  
+    .shape {  
+        position: absolute;  
+        border-radius: 50%;  
+        filter: blur(70px);  
+        opacity: 0.6;  
+        animation: floatShape 8s infinite alternate ease-in-out;  
+    }  
+    .shape-1 { width: 400px; height: 400px; background: #d4af37; top: -100px; left: -100px; }   
+    .shape-2 { width: 500px; height: 500px; background: #007bff; bottom: -150px; right: -100px; animation-delay: 2s; }  
+    .shape-3 { width: 300px; height: 300px; background: #dc3545; top: 30%; left: 40%; animation-delay: 4s; opacity: 0.4; }  
+
+    @keyframes floatShape {  
+        0% { transform: translateY(0) scale(1); }  
+        100% { transform: translateY(-40px) scale(1.1); }  
+    }  
+
+    .back-btn-main {  
+        position: fixed;   
+        top: 20px;  
+        right: 20px;  
+        padding: 10px 20px;  
+        background-color: #dc3545;  
+        color: white;  
+        border: 1px solid rgba(255,255,255,0.3);   
+        border-radius: 8px;  
+        cursor: pointer;  
+        font-size: 1.2rem;  
+        font-weight: bold;  
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);  
+        display: none;  
+        z-index: 1000;  
+    }  
+    .back-btn-main:hover { background-color: #c82333; transform: scale(1.05); }  
+
+    .welcome-text {  
+        font-size: 5rem;  
+        color: #ffcc00;   
+        text-shadow: 0 0 20px rgba(255, 204, 0, 0.6);   
+        font-weight: bold;  
+        opacity: 0;  
+        animation: appearGrowShrink 3s ease-in-out forwards;  
+    }  
+
+    @keyframes appearGrowShrink {  
+        0% { transform: scale(0); opacity: 0; }  
+        30% { transform: scale(1.2); opacity: 1; }  
+        70% { transform: scale(1.2); opacity: 1; }  
+        100% { transform: scale(0); opacity: 0; }  
+    }  
+
+    #main-screen { display: none; gap: 20px; flex-direction: column; align-items: center; }  
+      
+    .main-buttons-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 20px; width: 100%; }  
+
+    .page-screen {   
+        display: none;   
+        width: 100%;   
+        height: 100%;   
+        justify-content: flex-start;   
+        align-items: center;   
+        overflow-y: auto;   
+        flex-direction: column;   
+        padding-bottom: 50px;   
+    }  
+
+    .btn {  
+        padding: 15px 50px;  
+        font-size: 2rem;  
+        font-weight: bold;  
+        color: #fff;  
+        border: 1px solid rgba(255,255,255,0.2);   
+        border-radius: 12px;  
+        cursor: pointer;  
+        box-shadow: 0 8px 20px rgba(0,0,0,0.3);  
+        transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;  
+        width: 250px; /* لتوحيد عرض الأزرار */  
+    }  
+    .btn.send { background-color: #28a745; margin-bottom: 10px; }  
+      
+    /* زر المله */  
+    .btn.mulla-btn { background-color: #000000; color: #ffffff; }  
+
+    .btn.orders { background-color: #ffc107; color: #000; width: auto; }  
+    .btn.sound-control { font-size: 1.1rem; padding: 12px 25px; width: 250px; border-radius: 10px; }  
+    .btn.sound-enable { background-color: #28a745; }  
+    .btn.sound-disable { background-color: #dc3545; }  
+      
+    .btn:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }  
+
+    /* تأثير الوميض للزر عند وصول طلب جديد */  
+    @keyframes pulseAlert {  
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }  
+        50% { transform: scale(1.08); box-shadow: 0 0 25px 12px rgba(220, 53, 69, 0.9); }  
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }  
+    }  
+    .pulse-active {  
+        animation: pulseAlert 0.8s infinite !important;  
+    }  
+
+    /* تأثير التلاشي عند الاستلام أو الإلغاء */  
+    .fade-out-anim {  
+        opacity: 0 !important;  
+        transform: scale(0.8) !important;  
+        transition: all 0.4s ease-out !important;  
+        pointer-events: none;  
+    }  
+
+    .order-container {  
+        background: rgba(255, 255, 255, 0.85) !important;  
+        backdrop-filter: blur(15px);  
+        border: 1px solid rgba(255, 255, 255, 0.5);  
+        width: 90%;  
+        max-width: 500px;  
+        padding: 30px;  
+        border-radius: 15px;   
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3) !important;  
+        margin-top: 90px;   
+    }  
+    h2 { text-align: center; color: #333; margin-bottom: 30px; border-bottom: 2px solid #28a745; padding-bottom: 10px; }  
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #ddd; }  
+    .item-name { font-size: 1.1rem; font-weight: bold; color: #444; }  
+    .quantity-box { display: flex; align-items: center; gap: 10px; }  
+    .qty-btn { background-color: #007bff; color: white; border: none; border-radius: 6px; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }  
+    .qty-btn.minus { background-color: #dc3545; }  
+    .quantity-box input { width: 50px; height: 40px; font-size: 1.3rem; text-align: center; border: 1px solid #ccc; border-radius: 6px; pointer-events: none; font-weight: bold; }  
+      
+    .submit-btn { width: 100%; background-color: #28a745; color: #fff; border: none; padding: 15px; font-size: 1.3rem; font-weight: bold; border-radius: 8px; margin-top: 25px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: 0.2s; }  
+    .submit-btn:hover { transform: scale(1.02); }  
+      
+    .order-item-card {   
+        border: 1px solid #ccc;   
+        padding: 15px;   
+        margin-bottom: 15px;   
+        border-radius: 12px;   
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);   
+        color: #222;  
+    }  
+      
+    .qty-highlight {  
+        display: inline-block;  
+        background-color: #fff;  
+        color: #dc3545;  
+        font-size: 1.4rem;  
+        font-weight: 900;  
+        padding: 2px 10px;  
+        border-radius: 6px;  
+        border: 2px solid #dc3545;  
+        margin: 0 5px;  
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);  
+    }  
+
+    .time-badge {  
+        background-color: rgba(255,255,255,0.7);  
+        padding: 4px 10px;  
+        border-radius: 8px;  
+        font-size: 0.9rem;  
+        font-weight: bold;  
+        color: #444;  
+        border: 1px solid rgba(0,0,0,0.1);  
+    }  
+
+    .receive-btn { background-color: #28a745; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;}  
+    .receive-btn:hover { transform: scale(1.02); }  
+    .cancel-btn { background-color: #dc3545; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s;}  
+    .cancel-btn:hover { transform: scale(1.02); }  
+</style>  
+
+</head>  
+<body>  <!-- عنصر الصوت مجهز بنغمة الفلوت مع التكرار loop -->  
+<audio id="alert-sound" src="https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3" preload="auto" loop></audio>  
+
+<div class="bg-decorations">  
+    <div class="shape shape-1"></div>  
+    <div class="shape shape-2"></div>  
+    <div class="shape shape-3"></div>  
+</div>  
+
+<button id="back-btn-main" class="back-btn-main" onclick="goBack()">رجوع</button>  
+
+<div id="welcome-text" class="welcome-text">العافية</div>  
+
+<div id="main-screen">  
+    <div class="main-buttons-container">  
+        <button class="btn send" onclick="showPage('send-screen')">إرسال</button>  
+        <button class="btn mulla-btn" id="mulla-btn" onclick="showPage('mulla-screen')">المله</button>  
+        
+        <!-- أزرار التحكم بالصوت -->
+        <button class="btn sound-control sound-enable" onclick="enableSoundWithPass()">تشغيل الصوت 🔔</button>  
+        <button class="btn sound-control sound-disable" onclick="disableSoundWithPass()">إلغاء الصوت 🔇</button>  
+    </div>  
+</div>  
+
+<!-- شاشة الإرسال -->  
+<div id="send-screen" class="page-screen">  
+    <div class="order-container">  
+        <h2>إرسال طلب جديد</h2>  
+        <button class="btn orders" style="width: 100%; margin-bottom: 20px; font-size: 1rem;" onclick="showPage('orders-screen')">عرض الطلبات المسجلة</button>  
+          
+        <div class="item-row">  
+            <div class="item-name">طبق عادي (2000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty1')">+</button>  
+                <input type="number" id="qty1" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty1')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">طبق فنكر (1000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty2')">+</button>  
+                <input type="number" id="qty2" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty2')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">صاج دجاج عادي (2000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty3')">+</button>  
+                <input type="number" id="qty3" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty3')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">صاج دجاج طبق (2500)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty4')">+</button>  
+                <input type="number" id="qty4" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty4')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">صاج لحم عادي (2000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty5')">+</button>  
+                <input type="number" id="qty5" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty5')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">صاج لحم طبق (2500)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty6')">+</button>  
+                <input type="number" id="qty6" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty6')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">ريزو صغير (2000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty7')">+</button>  
+                <input type="number" id="qty7" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty7')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">ريزو كبير (4000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty8')">+</button>  
+                <input type="number" id="qty8" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty8')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row">  
+            <div class="item-name">جكن فرايز (4000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty9')">+</button>  
+                <input type="number" id="qty9" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty9')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row" style="background-color: rgba(220, 53, 69, 0.1); padding: 10px; border-radius: 8px;">  
+            <div class="item-name" style="color: #dc3545;">بركر العافيه (2000)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty10')">+</button>  
+                <input type="number" id="qty10" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty10')">-</button>  
+            </div>  
+        </div>  
+        <div class="item-row" style="background-color: rgba(220, 53, 69, 0.1); padding: 10px; border-radius: 8px;">  
+            <div class="item-name" style="color: #dc3545;">لفه سنجر (2500)</div>  
+            <div class="quantity-box">  
+                <button class="qty-btn" onclick="increaseQty('qty11')">+</button>  
+                <input type="number" id="qty11" min="0" value="0">  
+                <button class="qty-btn minus" onclick="decreaseQty('qty11')">-</button>  
+            </div>  
+        </div>  
+          
+        <textarea id="notes" style="width:100%; height:80px; margin-top:20px; border-radius:8px; border: 1px solid #ccc; padding: 10px; font-family: inherit; box-sizing: border-box;" placeholder="ملاحظات الطلب..."></textarea>  
+        <button class="submit-btn" onclick="saveOrder()">إرسال الطلب</button>  
+    </div>  
+</div>  
+
+<div id="orders-screen" class="page-screen">  
+    <div class="order-container">  
+        <h2>الطلبات المسجلة</h2>  
+        <div id="orders-list"></div>  
+    </div>  
+</div>  
+
+<!-- شاشة استلام المله -->  
+<div id="mulla-screen" class="page-screen">  
+    <button class="btn orders" style="position: absolute; top: 20px; left: 20px; font-size: 1rem; padding: 10px 20px;" onclick="showPage('history-screen')">السجل</button>  
+      
+    <div class="order-container">  
+        <h2>قائمة استلام - المله</h2>  
+        <div id="mulla-list"></div>  
+    </div>  
+</div>  
+
+<div id="history-screen" class="page-screen">  
+    <div class="order-container">  
+        <h2>السجل</h2>  
+        <button class="btn" style="width: 100%; margin-bottom: 20px; font-size: 1rem; padding: 10px 20px; background-color: #dc3545; color: white;" onclick="clearHistory()">حذف السجل</button>  
+        <div id="history-list"></div>  
+    </div>  
+</div>  
+
+<script>  
+    // تسجيل خدمة التثبيت PWA للتطبيق
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('PWA Service Worker Registered!'))
+                .catch(err => console.log('Service Worker Error:', err));
+        });
+    }
+
+    const firebaseConfig = {  
+        apiKey: "AIzaSyBXW3gL4PszJjmgmVVOjkuEqe-WkWHyO60",  
+        authDomain: "al-bandar-f02f6.firebaseapp.com",  
+        databaseURL: "https://al-bandar-f02f6-default-rtdb.firebaseio.com",  
+        projectId: "al-bandar-f02f6",  
+        storageBucket: "al-bandar-f02f6.firebasestorage.app",  
+        messagingSenderId: "799678549296",  
+        appId: "1:799678549296:web:bd1cc0ff99a680eabfccf5",  
+        measurementId: "G-KRRFC79HC3"  
+    };  
+    firebase.initializeApp(firebaseConfig);  
+    
+    // تفعيل حفظ البيانات أوفلاين في الفايربيز
+    firebase.database().goOnline();
+
+    const db = firebase.database();  
+    const messaging = firebase.messaging();  
+
+    let orders = [];  
+    let historyOrders = [];   
+    let pageHistory = ['main-screen'];  
+    let previousOrdersCount = -1;  
+
+    let soundElement = document.getElementById('alert-sound');  
+
+    const cardColors = ['#f8d7da', '#d1ecf1', '#d4edda', '#fff3cd', '#e8daef', '#ffebd7'];  
+
+    // دالة تشغيل الصوت باستخدام الرمز السري
+    function enableSoundWithPass() {  
+        let pass = prompt("أدخل الرمز السري لتشغيل الصوت:");  
+        if (pass === "2006") {  
+            localStorage.setItem('cashierSection', 'mulla');  
+            localStorage.setItem('isCashierDevice', 'true');  
+            alert("تم تشغيل الصوت وتفعيل جهاز العافية بنجاح! 🔔");  
+            requestNotificationPermission();  
+        } else if (pass !== null) {  
+            alert("الرمز السري غير صحيح!");  
+        }  
+    }  
+
+    // دالة إلغاء الصوت باستخدام الرمز السري
+    function disableSoundWithPass() {  
+        let pass = prompt("أدخل الرمز السري لإلغاء الصوت:");  
+        if (pass === "2006") {  
+            localStorage.setItem('isCashierDevice', 'false');  
+            stopAlert();  
+            alert("تم إيقاف وإلغاء الصوت لهذا الجهاز بنجاح! 🔇");  
+        } else if (pass !== null) {  
+            alert("الرمز السري غير صحيح!");  
+        }  
+    }  
+
+    function requestNotificationPermission() {  
+        if (localStorage.getItem('isCashierDevice') !== 'true') return;  
+
+        Notification.requestPermission().then((permission) => {  
+            if (permission === 'granted') {  
+                messaging.getToken({ vapidKey: 'BPohHHQQN16Y1ols63bqkBjaanF1NIVlZqsZNrAoIBWlA565Jt6JH9-JrauNibeH_k89lvz06pTXp-nye4ZlXdw' }).then((currentToken) => {  
+                    if (currentToken) {  
+                        console.log('التوكن الخاص بهذا الجهاز:', currentToken);  
+                        db.ref('adminTokens/' + currentToken).set(true);  
+                    }  
+                }).catch((err) => console.log('خطأ في جلب التوكن:', err));  
+            }  
+        });  
+    }  
+
+    document.body.addEventListener('click', () => {  
+        if (localStorage.getItem('isCashierDevice') === 'true' && Notification.permission !== 'granted') {  
+            requestNotificationPermission();  
+        }  
+    }, { once: true });  
+
+    messaging.onMessage((payload) => {  
+        console.log('إشعار مستلم والتطبيق مفتوح:', payload);  
+    });  
+
+    // مراقبة الداتابيز وتشغيل الصوت عند وصول طلب جديد للمله  
+    db.ref('orders').on('value', (snapshot) => {  
+        let newOrders = snapshot.val() || [];  
+          
+        if (previousOrdersCount !== -1) {  
+            if (newOrders.length > previousOrdersCount) {  
+                if (localStorage.getItem('isCashierDevice') === 'true') {  
+                    let mullaBtn = document.getElementById('mulla-btn');  
+                    if (mullaBtn) mullaBtn.classList.add('pulse-active');  
+                    playAlertSound();          
+                }  
+            } else if (newOrders.length < previousOrdersCount || newOrders.length === 0) {  
+                stopAlert();   
+            }  
+        }  
+          
+        previousOrdersCount = newOrders.length;  
+        orders = newOrders;  
+        updateVisibleLists();  
+    });  
+
+    db.ref('historyOrders').on('value', (snapshot) => {  
+        historyOrders = snapshot.val() || [];  
+        updateVisibleLists();  
+    });  
+
+    setTimeout(function() {  
+        document.getElementById('welcome-text').style.display = 'none';  
+        document.getElementById('main-screen').style.display = 'flex';  
+    }, 3000);   
+
+    function playAlertSound() {  
+        if (soundElement && localStorage.getItem('isCashierDevice') === 'true') {  
+            soundElement.currentTime = 0;  
+            soundElement.loop = true; // تكرار النغمة مستمر بدون توقف  
+            soundElement.play().catch(error => console.log(error));  
+        }  
+    }  
+
+    function stopAlert() {  
+        let mullaBtn = document.getElementById('mulla-btn');  
+        if (soundElement) {  
+            soundElement.pause();  
+            soundElement.currentTime = 0;  
+        }  
+        if (mullaBtn) mullaBtn.classList.remove('pulse-active');  
+    }  
+
+    function showPage(pageId) {  
+        document.querySelectorAll('.page-screen, #main-screen').forEach(s => s.style.display = 'none');  
+        document.getElementById(pageId).style.display = 'flex';  
+          
+        pageHistory.push(pageId);  
+        document.getElementById('back-btn-main').style.display = 'block';  
+        document.body.style.background = '#ffffff';  
+
+        if (pageId === 'mulla-screen') {  
+            stopAlert();   
+        }  
+
+        updateVisibleLists();  
+    }  
+
+    function goBack() {  
+        if (pageHistory.length > 1) {  
+            pageHistory.pop();  
+            let prevPage = pageHistory[pageHistory.length - 1];  
+            document.querySelectorAll('.page-screen, #main-screen').forEach(s => s.style.display = 'none');  
+            document.getElementById(prevPage).style.display = 'flex';  
+              
+            if (prevPage === 'main-screen') {  
+                document.getElementById('back-btn-main').style.display = 'none';  
+                document.body.style.background = 'linear-gradient(135deg, #141e30 0%, #243b55 100%)';  
+            }  
+        }  
+    }  
+
+    function increaseQty(id) { document.getElementById(id).value = parseInt(document.getElementById(id).value) + 1; }  
+    function decreaseQty(id) {   
+        if (parseInt(document.getElementById(id).value) > 0)   
+            document.getElementById(id).value = parseInt(document.getElementById(id).value) - 1;   
+    }  
+
+    function saveOrder() {  
+        let q1 = parseInt(document.getElementById('qty1').value) || 0;  
+        let q2 = parseInt(document.getElementById('qty2').value) || 0;  
+        let q3 = parseInt(document.getElementById('qty3').value) || 0;  
+        let q4 = parseInt(document.getElementById('qty4').value) || 0;  
+        let q5 = parseInt(document.getElementById('qty5').value) || 0;  
+        let q6 = parseInt(document.getElementById('qty6').value) || 0;  
+        let q7 = parseInt(document.getElementById('qty7').value) || 0;  
+        let q8 = parseInt(document.getElementById('qty8').value) || 0;  
+        let q9 = parseInt(document.getElementById('qty9').value) || 0;  
+        let q10 = parseInt(document.getElementById('qty10').value) || 0;  
+        let q11 = parseInt(document.getElementById('qty11').value) || 0;  
+          
+        let notes = document.getElementById('notes').value;  
+        let timestamp = new Date().getTime();  
+
+        let hasItems = q1>0 || q2>0 || q3>0 || q4>0 || q5>0 || q6>0 || q7>0 || q8>0 || q9>0 || q10>0 || q11>0;  
+
+        if(!hasItems) { alert("يرجى اختيار صنف واحد على الأقل"); return; }  
+
+        // إرسال الطلب بالكامل إلى قسم المله  
+        orders.push({  
+            section: 'mulla',  
+            q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11,  
+            notes, timestamp  
+        });  
+
+        db.ref('orders').set(orders);   
+
+        alert("تم تسجيل الطلب وإرساله إلى المله بنجاح!");  
+        for(let i=1; i<=11; i++){  
+            let el = document.getElementById('qty'+i);  
+            if(el) el.value = 0;  
+        }  
+        document.getElementById('notes').value = '';  
+    }  
+
+    function timeSince(timestamp) {  
+        if (!timestamp) return "";  
+        let diffMins = Math.floor((new Date().getTime() - timestamp) / 60000);  
+        if (diffMins < 1) return "الآن";  
+        if (diffMins < 60) return `منذ ${diffMins} دقيقة`;  
+        let hours = Math.floor(diffMins / 60);  
+        let mins = diffMins % 60;  
+        return `منذ ${hours} ساعة${mins > 0 ? ` و ${mins} دقيقة` : ''}`;  
+    }  
+
+    function renderOrders(elementId, isReceive, listArray, isHistory = false) {  
+        let list = document.getElementById(elementId);  
+        list.innerHTML = '';  
+          
+        let totalAllOrders = 0;   
+        let totalItemsSold = 0;   
+        let renderedCount = 0;   
+
+        listArray.forEach((o, index) => {  
+            renderedCount++;  
+
+            let bgColor = cardColors[index % cardColors.length];   
+            let timeText = timeSince(o.timestamp);   
+
+            let receiveHtml = isReceive ? `  
+                <div style="display: flex; gap: 10px;">  
+                    <button class="receive-btn" onclick="receiveOrder(${index})">استلم</button>  
+                    <button class="cancel-btn" onclick="cancelOrder(${index})">إلغاء</button>  
+                </div>  
+            ` : '';  
+
+            // حساب الأسعار والكميات  
+            let p1 = parseInt(o.q1) || 0; // طبق عادي 2000  
+            let p2 = parseInt(o.q2) || 0; // طبق فنكر 1000  
+            let p3 = parseInt(o.q3) || 0; // صاج دجاج عادي 2000  
+            let p4 = parseInt(o.q4) || 0; // صاج دجاج طبق 2500  
+            let p5 = parseInt(o.q5) || 0; // صاج لحم عادي 2000  
+            let p6 = parseInt(o.q6) || 0; // صاج لحم طبق 2500  
+            let p7 = parseInt(o.q7) || 0; // ريزو صغير 2000  
+            let p8 = parseInt(o.q8) || 0; // ريزو كبير 4000  
+            let p9 = parseInt(o.q9) || 0; // جكن فرايز 4000  
+            let p10 = parseInt(o.q10) || 0; // بركر العافيه 2000  
+            let p11 = parseInt(o.q11) || 0; // لفه سنجر 2500  
+
+            let orderItemsCount = p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + p11;  
+            let orderTotalPrice = (p1*2000) + (p2*1000) + (p3*2000) + (p4*2500) + (p5*2000) + (p6*2500) + (p7*2000) + (p8*4000) + (p9*4000) + (p10*2000) + (p11*2500);  
+
+            let priceHtml = '';  
+            if (isHistory) {  
+                totalAllOrders += orderTotalPrice;  
+                totalItemsSold += orderItemsCount;  
+                  
+                priceHtml = `  
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 2px dashed #ccc; font-size: 1.3rem; font-weight: bold; color: #198754;">  
+                        سعر الطلب: ${orderTotalPrice.toLocaleString()} دينار  
+                    </div>  
+                `;  
+            }  
+
+            // عرض الأصناف المطلوبة فقط  
+            let itemsHtml = '';  
+            if(p1 > 0) itemsHtml += `طبق عادي: <span class="qty-highlight">${p1}</span> <br><br>`;  
+            if(p2 > 0) itemsHtml += `طبق فنكر: <span class="qty-highlight">${p2}</span> <br><br>`;  
+            if(p3 > 0) itemsHtml += `صاج دجاج عادي: <span class="qty-highlight">${p3}</span> <br><br>`;  
+            if(p4 > 0) itemsHtml += `صاج دجاج طبق: <span class="qty-highlight">${p4}</span> <br><br>`;  
+            if(p5 > 0) itemsHtml += `صاج لحم عادي: <span class="qty-highlight">${p5}</span> <br><br>`;  
+            if(p6 > 0) itemsHtml += `صاج لحم طبق: <span class="qty-highlight">${p6}</span> <br><br>`;  
+            if(p7 > 0) itemsHtml += `ريزو صغير: <span class="qty-highlight">${p7}</span> <br><br>`;  
+            if(p8 > 0) itemsHtml += `ريزو كبير: <span class="qty-highlight">${p8}</span> <br><br>`;  
+            if(p9 > 0) itemsHtml += `جكن فرايز: <span class="qty-highlight">${p9}</span> <br><br>`;  
+            if(p10 > 0) itemsHtml += `بركر العافيه: <span class="qty-highlight">${p10}</span> <br><br>`;  
+            if(p11 > 0) itemsHtml += `لفه سنجر: <span class="qty-highlight">${p11}</span> <br><br>`;  
+
+            if(itemsHtml.endsWith('<br><br>')) itemsHtml = itemsHtml.slice(0, -8);  
+
+            list.innerHTML += `  
+                <div id="${elementId}-card-${index}" class="order-item-card" style="background-color: ${bgColor};">  
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">  
+                        <strong style="font-size: 1.2rem;">طلب رقم ${index + 1}</strong>  
+                        ${timeText ? `<span class="time-badge">⏱️ ${timeText}</span>` : ''}  
+                    </div>  
+                    <div style="font-size: 1.2rem; font-weight: bold; margin: 15px 0;">  
+                        ${itemsHtml}  
+                    </div>  
+                    <em style="color: #444;">الملاحظات: ${o.notes || 'لا توجد'}</em>  
+                    ${priceHtml}  
+                    ${receiveHtml}  
+                </div>`;  
+        });  
+
+        if (renderedCount === 0) {  
+            list.innerHTML = '<p style="text-align:center">لا توجد طلبات.</p>';  
+        }  
+
+        if (isHistory && listArray.length > 0) {  
+            list.innerHTML += `  
+                <div style="background-color: #198754; color: white; padding: 15px; border-radius: 12px; text-align: center; font-size: 1.5rem; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">  
+                    المجموع الكلي للحساب: ${totalAllOrders.toLocaleString()} دينار  
+                </div>  
+                <div style="background-color: #0dcaf0; color: black; padding: 15px; border-radius: 12px; text-align: center; font-size: 1.5rem; font-weight: bold; margin-top: 15px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">  
+                    عدد اللفات / الأطباق المباعة اليوم: <span style="font-size: 1.8rem; color: #dc3545;">${totalItemsSold}</span>  
+                </div>  
+            `;  
+        }  
+    }  
+
+    function updateVisibleLists() {  
+        let currentPage = pageHistory[pageHistory.length - 1];  
+        if(currentPage === 'orders-screen') renderOrders('orders-list', false, orders, false);  
+        if(currentPage === 'mulla-screen') renderOrders('mulla-list', true, orders, false);  
+        if(currentPage === 'history-screen') renderOrders('history-list', false, historyOrders, true);  
+    }  
+
+    setInterval(() => {  
+        updateVisibleLists();  
+    }, 60000);  
+
+    function receiveOrder(index) {  
+        let card = document.getElementById(`mulla-list-card-${index}`);  
+        if (card) card.classList.add('fade-out-anim');  
+          
+        if (card) {  
+            setTimeout(() => { processReceive(index); }, 400);  
+        } else {  
+            processReceive(index);  
+        }  
+    }  
+
+    function processReceive(index) {  
+        stopAlert();  
+        let completedOrder = orders.splice(index, 1)[0];   
+        historyOrders.push(completedOrder);  
+          
+        db.ref('orders').set(orders);   
+        db.ref('historyOrders').set(historyOrders);   
+          
+        updateVisibleLists();  
+    }  
+
+    function cancelOrder(index) {  
+        let card = document.getElementById(`mulla-list-card-${index}`);  
+        if (card) card.classList.add('fade-out-anim');  
+          
+        if (card) {  
+            setTimeout(() => { processCancel(index); }, 400);  
+        } else {  
+            processCancel(index);  
+        }  
+    }  
+
+    function processCancel(index) {  
+        stopAlert();  
+        orders.splice(index, 1);   
+        db.ref('orders').set(orders);   
+        updateVisibleLists();  
+    }  
+
+    function clearHistory() {  
+        let pass = prompt("الرجاء إدخال الرمز السري لحذف السجل:");  
+        if (pass === "2006") {  
+            historyOrders = [];   
+            db.ref('historyOrders').set(historyOrders);   
+            alert("تم حذف السجل بنجاح!");  
+        } else if (pass !== null) {  
+            alert("الرمز السري غير صحيح!");  
+        }  
+    }  
+</script>  
+
+</body>  
+</html>
